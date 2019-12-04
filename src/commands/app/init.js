@@ -27,35 +27,33 @@ class InitCommand extends BaseCommand {
     }
     debug('creating new app with init command ', flags)
 
+    const env = yeoman.createEnv()
+    // finds and loads all installed generators into yeoman environment
+    await new Promise((resolve, reject) => env.lookup(err => {
+      if (err) reject(err)
+      resolve()
+    }))
+    env.alias(/^([a-zA-Z0-9:*]+)$/, 'aio-app-$1')
+
     let template = flags.template
     if (!template) {
       if (flags.yes) {
-        template = 'hello'
+        template = 'base:hello'
       } else {
+        const installedGenerators = env.getGeneratorsMeta()
         const responses = await inquirer.prompt([{
           name: 'template',
           message: 'select a starter template',
           type: 'list',
-          choices: [{ name: 'hello - a basic empty application' },
-            { name: 'target - use runtime functions to access the target api' },
-            { name: 'campaign - use runtime functions to access the campaign api' },
-            { name: 'analytics - use runtime functions to access the analytics api' }],
-          filter: (sel) => sel.split(' ')[0]
+          choices: Object.keys(installedGenerators)
+            .filter(name => name.startsWith('aio-app'))
+            .map(name => ({ name: name.split('aio-app-')[1] }))
         }])
         template = responses.template
       }
     }
-    if (!InitCommand.flags.template.options.includes(template)) {
-      this.error(`Expected --template=${template} to be one of: hello, target, campaign, analytics`)
-    }
-    const env = yeoman.createEnv()
-    try {
-      env.register(require.resolve('../../generators/create-' + template), 'gen')
-    } catch (err) {
-      this.error(`the '${flags.template}' template is not available.`)
-    }
 
-    const res = await env.run('gen', { skip_prompt: flags.yes })
+    const res = await env.run(template, { skip_prompt: flags.yes })
     // finalize configuration data
     this.log('✔ App initialization finished!')
     return res
@@ -72,10 +70,21 @@ InitCommand.flags = {
     char: 'y'
   }),
   template: flags.string({
-    description: 'Adobe I/O App starter template',
-    char: 't',
-    options: ['hello', 'target', 'campaign', 'analytics']
+    description: 'App starter template name',
+    char: 't'
   }),
+  // todo support this
+  // 'template-path': flags.string({
+  //   description: 'Path to an app starter template',
+  //   char: 'p'
+  // }),
+  // instead of lookup and get, yeoman-env logic would be something like this
+  // try {
+  //   env.register(require.resolve(path), 'gen')
+  // } catch (err) {
+  //   this.error(`the '${flags.template}' template is not available.`)
+  // }
+  // const res = await env.run('gen', { skip_prompt: flags.yes })
   ...BaseCommand.flags
 }
 
