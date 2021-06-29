@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Adobe. All rights reserved.
+Copyright 2021 Adobe. All rights reserved.
 This file is licensed to you under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License. You may obtain a copy
 of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -11,39 +11,54 @@ governing permissions and limitations under the License.
 */
 
 const { flags } = require('@oclif/command')
-const appHelper = require('../../lib/app-helper')
 const BaseCommand = require('../../BaseCommand')
 
-class Test extends BaseCommand {
+class TestCommand extends BaseCommand {
   async run () {
-    const { flags } = this.parse(Test)
-    // some things we could do here:
-    // test configurations, ie remote-actions deployed and called from local
-    // this just runs package.json scripts.test, we could also check that this is in fact an aio app project
-    const command = flags.e2e ? 'e2e' : 'test'
-    try {
-      await appHelper.runPackageScript(command, process.cwd())
-    } catch (e) {
-      return this.error(e.message, { exit: e.exitCode })
+    const { flags } = this.parse(TestCommand)
+
+    console.log('flags.all', flags.all)
+    if (flags.all) {
+      flags.unit = true
+      flags.e2e = true
     }
+
+    console.log('flags.unit', flags.unit)
+    console.log('flags.e2e', flags.e2e)
+    console.log('flags.action', flags.action)
+    console.log('flags.extension', flags.extension)
   }
 }
 
-Test.description = `Run tests for an Adobe I/O App
-`
-
-Test.flags = {
-  ...BaseCommand.flags,
-  unit: flags.boolean({
-    char: 'u',
-    description: 'runs unit tests (default).',
-    default: true,
-    exclusive: ['e2e']
+TestCommand.flags = {
+  extension: flags.string({
+    description: 'the extension(s) to test',
+    exclusive: ['action'],
+    multiple: true
+  }),
+  action: flags.string({
+    description: 'the action(s) to test',
+    exclusive: ['extension'],
+    multiple: true
+  }),
+  all: flags.boolean({
+    description: 'run both unit and e2e tests',
+    default: false
   }),
   e2e: flags.boolean({
-    char: 'e',
-    description: 'runs e2e tests.',
-    exclusive: ['unit']
+    description: 'run e2e tests',
+    default: false,
+    exclusive: ['all'],
+    allowNo: true
+  }),
+  unit: flags.boolean({
+    description: 'run unit tests',
+    default: true,
+    exclusive: ['all'],
+    allowNo: true
   })
 }
-module.exports = Test
+
+TestCommand.description = 'Tests'
+
+module.exports = TestCommand
